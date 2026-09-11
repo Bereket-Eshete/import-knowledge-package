@@ -86,7 +86,7 @@ def test_default_export_filename_has_no_random_suffix(tmp_path):
     result = MemoryTransfer(tmp_path / "transfer", source).export("history")
 
     assert re.fullmatch(
-        r"omegaclaw-memory-\d{8}T\d{6}Z\.tar\.gz", result["filename"]
+        r"omega-memory-\d{8}T\d{6}Z\.tar\.gz", result["filename"]
     )
 
 

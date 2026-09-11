@@ -11,7 +11,7 @@ from typing import Any
 from .archive import FORMAT_VERSION, MANIFEST_NAME, expected_members
 from .errors import ArchiveValidationError
 
-FORMAT_NAME = "omegaclaw-user-memory"
+FORMAT_NAME = "omega-user-memory"
 
 
 def sha256_file(path: Path) -> str:
@@ -101,7 +101,7 @@ def _validate_manifest_metadata(manifest: dict) -> None:
     source = manifest.get("source")
     if not isinstance(source, dict):
         raise ArchiveValidationError("Manifest source is required")
-    for key in ("omegaclaw_version", "chromadb_version"):
+    for key in ("omega_version", "chromadb_version"):
         if not isinstance(source.get(key), str) or not source[key]:
             raise ArchiveValidationError(f"Manifest source.{key} is required")
 

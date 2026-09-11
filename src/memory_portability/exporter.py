@@ -1,4 +1,4 @@
-"""Logical export of OmegaClaw history and user LTM records."""
+"""Logical export of Omega history and user LTM records."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def export_memory(
 ) -> dict:
     """Create and atomically publish a memory archive.
 
-    The caller must hold OmegaClaw's memory-write lock for the duration of this
+    The caller must hold Omega's memory-write lock for the duration of this
     synchronous call when a cross-component point-in-time snapshot is required.
     """
     if component not in {"history", "ltm", "both"}:
@@ -110,7 +110,7 @@ def export_memory(
 
 def _default_filename() -> str:
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return f"omegaclaw-memory-{timestamp}.tar.gz"
+    return f"omega-memory-{timestamp}.tar.gz"
 
 
 def _validate_filename(filename: str) -> None:

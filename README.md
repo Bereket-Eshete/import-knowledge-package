@@ -1,16 +1,21 @@
-# Import Knowledge (import-kb)
+# Import Knowledge and Memory Portability (`import-kb`)
 
-A utility package for importing distilled knowledge and curriculum files into a ChromaDB-based Long-Term Memory (LTM) system.
+A utility package for importing distilled knowledge into a ChromaDB-based Long-Term Memory (LTM) system and backing up or restoring Omega user memory.
 
 ## Purpose
 The `import-kb` package is designed to bridge the gap between static knowledge files (JSONL, MeTTa) and an active agent's memory. It processes structured knowledge, generates vector embeddings, and upserts them into a ChromaDB collection, enabling semantic search and retrieval for AI agents.
 
+The package also provides `memory_portability`, a programmatic interface for exporting and restoring Omega conversation history and user LTM records. Omega Core remains responsible for its CLI, container lifecycle, transfer-directory mount, and user-facing decisions.
+
 ## Supported Embedding Models
-This package supports two primary embedding modes:
+This package supports the following embedding modes:
 
 - **OpenAI (Cloud)**:
   - Default model: `text-embedding-3-large`
   - High accuracy but requires an internet connection and an API key.
+- **ASI Cloud**:
+  - Default model: `WhereIsAI/UAE-Large-V1`
+  - Uses an OpenAI-compatible endpoint hosted by ASI Cloud, requires an API key.
 - **SentenceTransformers (Local)**:
   - Default model: `intfloat/e5-large-v2`
   - Runs fully offline on your local machine.
@@ -36,6 +41,7 @@ pip install -e .
 Create a `.env` file in your project root or set the following environment variables:
 
 - `OPENAI_API_KEY`: Required if using OpenAI embeddings.
+- `ASI_API_KEY`: Required if using ASI Cloud embeddings (`--provider asicloud`).
 - `CHROMA_DB_PATH`: (Optional) Custom path to your Chroma database. Defaults to looking for `/PeTTa/chroma_db` or a local `chroma_db` folder.
 
 ## How to Run
@@ -47,14 +53,23 @@ After installation, you can run the import via the provided entry point:
 # Use OpenAI embeddings (default)
 import-knowledge
 
+# Same as above, made explicit
+import-knowledge --provider openai
+
+# Override OpenAI model
+import-knowledge --provider openai --model "text-embedding-3-small"
+
+# Use ASI Cloud embeddings
+import-knowledge --provider asicloud
+
+# Override the ASI Cloud model
+import-knowledge --provider asicloud --model "<model-name>"
+
 # Use Local embeddings
 import-knowledge --local
 
 # Use a specific local model
 import-knowledge --local --model "all-MiniLM-L6-v2"
-
-# Override OpenAI model
-import-knowledge --model "text-embedding-3-small"
 ```
 
 Alternatively, run it as a module:
@@ -86,7 +101,7 @@ from pathlib import Path
 from memory_portability import MemoryStore, MemoryTransfer
 
 store = MemoryStore(
-    memory_dir=Path("/path/to/omegaclaw/memory"),
+    memory_dir=Path("/path/to/omega/memory"),
     chroma_path=Path("/path/to/chroma_db"),
     collection_name="memories",
 )
@@ -96,11 +111,11 @@ transfer = MemoryTransfer(
 )
 
 transfer.export(component="both")
-transfer.import_archive("omegaclaw-memory-<timestamp>.tar.gz")
+transfer.import_archive("omega-memory-<timestamp>.tar.gz")
 transfer.recover()
 ```
 
-`MemoryStore` does not infer OmegaClaw paths or read them from environment
+`MemoryStore` does not infer Omega paths or read them from environment
 variables. Resolve these values in the host application's configuration layer.
 
 ## Dependencies
@@ -110,5 +125,8 @@ variables. Resolve these values in the host application's configuration layer.
 - `python-dotenv`: Management of environment variables.
 - `tqdm`: Progress bars for batch processing.
 
+---
+
 ## License
-MIT License. See the LICENSE file for more details.
+
+This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) file for details.

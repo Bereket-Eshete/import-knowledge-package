@@ -1,4 +1,4 @@
-"""Portable export and restore of OmegaClaw user memory."""
+"""Portable export and restore of Omega user memory."""
 
 from .storage import MemoryStore
 from .transfer import MemoryTransfer

@@ -1,4 +1,4 @@
-"""Small synchronous facade for OmegaClaw's CLI and skill layers."""
+"""Small synchronous facade for Omega's CLI and skill layers."""
 
 from __future__ import annotations
 
