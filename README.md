@@ -110,13 +110,18 @@ transfer = MemoryTransfer(
     store=store,
 )
 
-transfer.export(component="both")
-transfer.import_archive("omega-memory-<timestamp>.tar.gz")
+exported = transfer.export(component="both")
+transfer.import_archive(exported["filename"])
 transfer.recover()
 ```
 
 `MemoryStore` does not infer Omega paths or read them from environment
 variables. Resolve these values in the host application's configuration layer.
+
+Default exports use `omega-memory-<UTC timestamp>-<ID>.tar.gz`, where the
+ID is the first eight hexadecimal characters of a UUIDv4. The transfer
+filesystem must support hard links; existing archive destinations are never
+overwritten.
 
 ## Dependencies
 - `openai`: For cloud-based embeddings.
