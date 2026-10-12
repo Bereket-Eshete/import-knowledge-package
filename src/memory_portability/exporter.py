@@ -21,7 +21,7 @@ def export_memory(
     include_embeddings: bool = True,
     filename: str | None = None,
 ) -> dict:
-    """Create and atomically publish a memory archive.
+    """Create and atomically publish a memory archive without replacement.
 
     The caller must hold Omega's memory-write lock for the duration of this
     synchronous call when a cross-component point-in-time snapshot is required.
@@ -95,7 +95,7 @@ def export_memory(
         verification = staging / ".verification"
         actual_members = unpack(temporary_archive, verification)
         load_and_validate(verification, actual_members)
-        os.replace(temporary_archive, final_path)
+        os.link(temporary_archive, final_path)
         return {
             "filename": archive_name,
             "components": components,
@@ -110,7 +110,7 @@ def export_memory(
 
 def _default_filename() -> str:
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return f"omega-memory-{timestamp}.tar.gz"
+    return f"omega-memory-{timestamp}-{uuid.uuid4().hex[:8]}.tar.gz"
 
 
 def _validate_filename(filename: str) -> None:
