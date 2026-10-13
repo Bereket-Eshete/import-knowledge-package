@@ -119,9 +119,7 @@ transfer.recover()
 variables. Resolve these values in the host application's configuration layer.
 
 Default exports use `omega-memory-<UTC timestamp>-<ID>.tar.gz`, where the
-ID is the first eight hexadecimal characters of a UUIDv4. The transfer
-filesystem must support hard links; existing archive destinations are never
-overwritten.
+ID is the first eight hexadecimal characters of a UUIDv4.
 
 ## Dependencies
 - `openai`: For cloud-based embeddings.
