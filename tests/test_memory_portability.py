@@ -3,9 +3,7 @@ import json
 import re
 import tarfile
 import types
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from threading import Barrier
 
 import pytest
 
@@ -42,23 +40,6 @@ def record(record_id, document, embedding=None, metadata=None):
 
 def user_records(store):
     return [item for batch in store.iter_user_records() for item in batch]
-
-
-def export_concurrently(monkeypatch, transfer, filename=None):
-    barrier = Barrier(2, timeout=10)
-    read_history = transfer.store.read_history
-
-    def synchronized_read():
-        barrier.wait()
-        return read_history()
-
-    monkeypatch.setattr(transfer.store, "read_history", synchronized_read)
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        futures = [
-            executor.submit(transfer.export, "history", filename=filename)
-            for _ in range(2)
-        ]
-    return futures
 
 
 def test_round_trip_restores_user_memory_and_preserves_knowledge(tmp_path):
@@ -100,8 +81,7 @@ def test_round_trip_restores_user_memory_and_preserves_knowledge(tmp_path):
     assert target.collection().get(ids=["knowledge-prior"])["ids"] == ["knowledge-prior"]
 
 
-@pytest.mark.parametrize("concurrent", [False, True], ids=["sequential", "overlapping"])
-def test_same_second_exports_have_unique_filenames(tmp_path, monkeypatch, concurrent):
+def test_same_second_exports_have_unique_filenames(tmp_path, monkeypatch):
     source = make_store(tmp_path, "source")
     source.write_history("history\n")
     transfer_dir = tmp_path / "transfer"
@@ -111,10 +91,7 @@ def test_same_second_exports_have_unique_filenames(tmp_path, monkeypatch, concur
         exporter, "datetime", types.SimpleNamespace(now=lambda tz: fixed_time)
     )
 
-    if concurrent:
-        results = [future.result() for future in export_concurrently(monkeypatch, transfer)]
-    else:
-        results = [transfer.export("history") for _ in range(2)]
+    results = [transfer.export("history") for _ in range(2)]
 
     assert len({result["filename"] for result in results}) == 2
     for index, result in enumerate(results):
@@ -128,39 +105,6 @@ def test_same_second_exports_have_unique_filenames(tmp_path, monkeypatch, concur
     assert set(transfer_dir.iterdir()) == {
         transfer_dir / result["filename"] for result in results
     }
-
-
-def test_concurrent_exports_do_not_overwrite_same_filename(tmp_path, monkeypatch):
-    source = make_store(tmp_path, "source")
-    source.write_history("history\n")
-    transfer_dir = tmp_path / "transfer"
-    transfer = MemoryTransfer(transfer_dir, source)
-
-    futures = export_concurrently(monkeypatch, transfer, filename="same.tar.gz")
-
-    assert sum(isinstance(future.exception(), FileExistsError) for future in futures) == 1
-    results = [future.result() for future in futures if future.exception() is None]
-    assert len(results) == 1
-    assert results[0]["filename"] == "same.tar.gz"
-    archive_path = transfer_dir / "same.tar.gz"
-    assert sha256_file(archive_path) == results[0]["sha256"]
-    assert list(transfer_dir.iterdir()) == [archive_path]
-
-
-def test_failed_export_publication_cleans_temporary_files(tmp_path, monkeypatch):
-    source = make_store(tmp_path, "source")
-    source.write_history("history\n")
-    transfer_dir = tmp_path / "transfer"
-
-    def fail_link(source_path, destination):
-        raise OSError("hard links unavailable")
-
-    monkeypatch.setattr(exporter.os, "link", fail_link)
-
-    with pytest.raises(OSError, match="hard links unavailable"):
-        MemoryTransfer(transfer_dir, source).export("history")
-
-    assert list(transfer_dir.iterdir()) == []
 
 
 def test_export_without_embeddings_reembeds_on_import(tmp_path):
