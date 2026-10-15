@@ -2,6 +2,8 @@ import io
 import json
 import re
 import tarfile
+import types
+from datetime import datetime, timezone
 
 import pytest
 
@@ -10,9 +12,9 @@ from memory_portability.errors import (
     ArchiveValidationError,
     MemoryImportError,
 )
-from memory_portability import MemoryStore, MemoryTransfer
+from memory_portability import MemoryStore, MemoryTransfer, exporter
 from memory_portability.records import profiles_compatible
-from memory_portability.validator import load_and_validate
+from memory_portability.validator import load_and_validate, sha256_file
 
 
 PROFILE = {"provider": "Local", "model": "test-model", "vector_dimension": 2}
@@ -79,15 +81,30 @@ def test_round_trip_restores_user_memory_and_preserves_knowledge(tmp_path):
     assert target.collection().get(ids=["knowledge-prior"])["ids"] == ["knowledge-prior"]
 
 
-def test_default_export_filename_has_no_random_suffix(tmp_path):
+def test_same_second_exports_have_unique_filenames(tmp_path, monkeypatch):
     source = make_store(tmp_path, "source")
     source.write_history("history\n")
-
-    result = MemoryTransfer(tmp_path / "transfer", source).export("history")
-
-    assert re.fullmatch(
-        r"omega-memory-\d{8}T\d{6}Z\.tar\.gz", result["filename"]
+    transfer_dir = tmp_path / "transfer"
+    transfer = MemoryTransfer(transfer_dir, source)
+    fixed_time = datetime(2026, 10, 12, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        exporter, "datetime", types.SimpleNamespace(now=lambda tz: fixed_time)
     )
+
+    results = [transfer.export("history") for _ in range(2)]
+
+    assert len({result["filename"] for result in results}) == 2
+    for index, result in enumerate(results):
+        assert re.fullmatch(
+            r"omega-memory-20261012T120000Z-[0-9a-f]{8}\.tar\.gz", result["filename"]
+        )
+        assert sha256_file(transfer_dir / result["filename"]) == result["sha256"]
+        target = make_store(tmp_path, f"target-{index}")
+        MemoryTransfer(transfer_dir, target).import_archive(result["filename"])
+        assert target.read_history() == "history\n"
+    assert set(transfer_dir.iterdir()) == {
+        transfer_dir / result["filename"] for result in results
+    }
 
 
 def test_export_without_embeddings_reembeds_on_import(tmp_path):
