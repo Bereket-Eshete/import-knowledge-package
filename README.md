@@ -130,6 +130,36 @@ ID is the first eight hexadecimal characters of a UUIDv4.
 
 ---
 
+## Publishing to PyPI
+
+The [publishing workflow](.github/workflows/publish.yml) builds and validates a
+source distribution and wheel when a GitHub Release is published, then uploads
+them to PyPI using [Trusted Publishing](https://docs.pypi.org/trusted-publishers/).
+No PyPI API token or GitHub secret is needed.
+
+One-time setup:
+
+1. Create a GitHub environment named `pypi` in the repository settings. Configure
+   required reviewers if releases should require approval before uploading.
+2. In the PyPI `import-kb` project's **Publishing** settings, add a GitHub trusted
+   publisher with the following values:
+   - **Owner:** the GitHub user or organization that will publish releases
+     (`blackhammer116` for this fork, or `singnet` for the upstream repository).
+   - **Repository:** `import-knowledge-package`.
+   - **Workflow filename:** `publish.yml`.
+   - **Environment:** `pypi`.
+
+To release, update `project.version` in `pyproject.toml` to an unused version,
+commit the change, and publish a GitHub Release tagged with that version
+(for example, `v0.2.5` or `0.2.5`). The tag must point to the commit containing
+the version update and this workflow. Draft releases and tag pushes alone do
+not publish; publishing a GitHub prerelease also triggers the workflow, so use
+a corresponding Python prerelease version such as `0.3.0rc1`.
+
+The workflow rejects tags that do not match `project.version`. PyPI does not
+allow an existing release file to be overwritten; use a new version for each
+release.
+
 ## License
 
 This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) file for details.
